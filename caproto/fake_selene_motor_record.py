@@ -16,7 +16,7 @@ async def broadcast_precision_to_fields(record):
             await prop.write_metadata(precision=precision)
 
 
-async def motor_record_simulator(instance, enabled, async_lib, defaults=None,
+async def motor_record_simulator(instance, parent, async_lib, defaults=None,
                                  tick_rate_hz=10.):
     """
     A simple motor record simulator.
@@ -69,7 +69,7 @@ async def motor_record_simulator(instance, enabled, async_lib, defaults=None,
 
     while True:
         dwell = 1. / tick_rate_hz
-        if enabled.value in [0, 'Off']:
+        if not parent.can_move:
             await async_lib.library.sleep(dwell)
             continue
 
@@ -121,13 +121,13 @@ async def motor_record_simulator(instance, enabled, async_lib, defaults=None,
 
 
 class FakeRangeSelector(PVGroup):
-    range = pvproperty(name='MCU{index}:FineAdjustment:Select', 
-                       value='narrow', 
+    range = pvproperty(name='MCU{index}:FineAdjustment:Select',
+                       value='narrow',
                        enum_strings=['wide', 'narrow'],
                        record="bi",
                        dtype=ChannelType.ENUM)
-    range_rbv = pvproperty(name='MCU{index}:FineAdjustment:Selected', 
-                           value='narrow', 
+    range_rbv = pvproperty(name='MCU{index}:FineAdjustment:Selected',
+                           value='narrow',
                            enum_strings=['wide', 'narrow'],
                            record='bo',
                            dtype=ChannelType.ENUM)
@@ -136,18 +136,31 @@ class FakeRangeSelector(PVGroup):
         super().__init__(*args, **kwargs)
 
     @range.putter
-    async def range(self, instance, value):      
+    async def range(self, instance, value):
         # this should check for the pitch positions....
         await self.range_rbv.write(value)
 
 
-class FakeMotor(PVGroup):
-    motor = pvproperty(value=0.0, name='P{index}', record='motor', precision=3)
+class FakePitchSelector(PVGroup):
     enable = pvproperty(value=0, name='P{index}:Select', dtype=bool)
     enable_rbv = pvproperty(value=0, name='P{index}:Selected', dtype=bool, read_only=True)
     selectable = pvproperty(value=0, name='P{index}:Selectable', dtype=bool)
 
+    @enable.putter
+    async def enable(self, instance, value):
+        if self.selectable.value == 'Off':
+            return
+        if value == 'Off':
+            return
+        current = True if self.enable_rbv.value == "On" else False
+        await self.enable_rbv.write(not current)
+
+
+class FakeMotor(PVGroup):
+    motor = pvproperty(value=0.0, name='MCU{index}', record='motor', precision=3)
+
     def __init__(self, *args,
+                 index,
                  velocity=0.1,
                  precision=3,
                  acceleration=1.0,
@@ -156,7 +169,7 @@ class FakeMotor(PVGroup):
                  tick_rate_hz=10.,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.index = kwargs.get('index', 0)
+        self.index = index
         self._have_new_position = False
         self.tick_rate_hz = tick_rate_hz
         self.defaults = {
@@ -171,18 +184,14 @@ class FakeMotor(PVGroup):
     async def motor(self, instance, async_lib):
         # Start the simulator:
         await motor_record_simulator(
-            self.motor, self.enable_rbv, async_lib, self.defaults,
+            self.motor, self, 
+            async_lib, self.defaults,
             tick_rate_hz=self.tick_rate_hz
         )
 
-    @enable.putter
-    async def enable(self, instance, value):
-        if self.selectable.value == 'Off':
-            return
-        if value == 'Off':
-            return        
-        current = True if self.enable_rbv.value == "On" else False
-        await self.enable_rbv.write(not current)
+    @property
+    def can_move(self):
+        return self.parent.can_move()
 
 
 class FakeMotorIOC(PVGroup):
@@ -198,9 +207,18 @@ class FakeMotorIOC(PVGroup):
     range1 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index':1})
     range2 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index':2})
 
-    motor1 = SubGroup(FakeMotor, velocity=1., precision=3, user_limits=(0, 10), prefix='SEL2:', macros={'index':1})
-    motor2 = SubGroup(FakeMotor, velocity=1., precision=3, user_limits=(0, 10), prefix='SEL2:', macros={'index':2})
-    motor3 = SubGroup(FakeMotor, velocity=1., precision=3, user_limits=(0, 10), prefix='SEL2:', macros={'index':3})
+    motor_opts = dict(velocity=1., precision=3, user_limits=(0, 10))
+
+    p1 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':1})
+    p2 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':2})
+    p3 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':3})
+    p4 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':4})
+
+    mcu1 = SubGroup(FakeMotor, **motor_opts, index=1, prefix='SEL2:', macros={'index':1})
+    # mcu2 = SubGroup(FakeMotor, **motor_opts, index=2, prefix='SEL2:', macros={'index':2})
+
+    def can_move(self):
+        return any([1 if pitch.enable_rbv.value in ['On', 1] else 0  for pitch in (self.p1,self.p2,self.p3,self.p4)])
 
 
 if __name__ == '__main__':
