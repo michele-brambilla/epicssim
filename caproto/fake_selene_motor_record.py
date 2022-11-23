@@ -147,11 +147,15 @@ class FakePitchSelector(PVGroup):
         value=0, name='P{index}:Selected', dtype=bool, read_only=True)
     selectable = pvproperty(value=0, name='P{index}:Selectable', dtype=bool)
 
+    def __init__(self, *args, mcu_index, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mcu_index = mcu_index
+
     @selectable.getter
     async def selectable(self, instance):
         if self.enable_rbv.value == 'On':
             return 'On'
-        return self.parent.can_enable()
+        return self.parent.can_enable()[self.mcu_index-1]
 
     @enable.putter
     async def enable(self, instance, value):
@@ -198,7 +202,7 @@ class FakeMotor(PVGroup):
 
     @property
     def can_move(self):
-        return self.parent.can_move()
+        return self.parent.can_move()[self.index-1]
 
 
 class FakeSeleneIOC(PVGroup):
@@ -214,44 +218,82 @@ class FakeSeleneIOC(PVGroup):
     range1 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index': 1})
     range2 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index': 2})
 
-    p1 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 1})
-    p2 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 2})
-    p3 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 3})
-    p4 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 4})
-    p5 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 5})
-    p6 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 6})
-    p7 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 7})
-    p8 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 8})
-    p9 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 9})
-    p10 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 10})
-    p11 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 11})
-    p12 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 12})
-    p13 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 13})
-    p14 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 14})
-    p15 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 15})
-    p16 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 16})
-    p17 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 17})
-    p18 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 18})
+    p1 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 1},  mcu_index=1)
+    p2 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 2},  mcu_index=1)
+    p3 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 3},  mcu_index=1)
+    p4 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 4},  mcu_index=1)
+    p5 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 5},  mcu_index=1)
+    p6 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 6},  mcu_index=1)
+    p7 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 7},  mcu_index=1)
+    p8 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 8},  mcu_index=1)
+    p9 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 9},  mcu_index=1)
+    p10 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 10}, mcu_index=1)
+    p11 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 11}, mcu_index=1)
+    p12 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 12}, mcu_index=1)
+    p13 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 13}, mcu_index=1)
+    p14 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 14}, mcu_index=1)
+    p15 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 15}, mcu_index=1)
+    p16 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 16}, mcu_index=1)
+    p17 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 17}, mcu_index=1)
+    p18 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 18}, mcu_index=1)
+    p19 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 19}, mcu_index=2)
+    p20 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 20}, mcu_index=2)
+    p21 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 21}, mcu_index=2)
+    p22 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 22}, mcu_index=2)
+    p23 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 23}, mcu_index=2)
+    p24 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 24}, mcu_index=2)
+    p25 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 25}, mcu_index=2)
+    p26 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 26}, mcu_index=2)
+    p27 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 27}, mcu_index=2)
+    p28 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 28}, mcu_index=2)
+    p29 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 29}, mcu_index=2)
+    p30 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 30}, mcu_index=2)
+    p31 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 31}, mcu_index=2)
+    p32 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 32}, mcu_index=2)
+    p33 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 33}, mcu_index=2)
+    p34 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 34}, mcu_index=2)
+    p35 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 35}, mcu_index=2)
+    p36 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 36}, mcu_index=2)
 
     mcu1 = SubGroup(
         FakeMotor, velocity=1., precision=3, user_limits=(0, 10), index=1,
         prefix='SEL2:', macros={'index': 1}
     )
+    mcu2 = SubGroup(
+        FakeMotor, velocity=1., precision=3, user_limits=(0, 10), index=2,
+        prefix='SEL2:', macros={'index': 2}
+    )
 
     def can_move(self):
-        return any(
-            [1 if pitch.enable_rbv.value in ['On', 1] else 0 for pitch in
-             (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6, self.p7,
-              self.p8, self.p9, self.p10, self.p11, self.p12, self.p13,
-              self.p14, self.p15, self.p16, self.p17, self.p18)]
+        return (
+            any([
+                pitch.enable_rbv.value in ['On', 1] for pitch in
+                (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6,
+                 self.p7, self.p8, self.p9, self.p10, self.p11, self.p12,
+                 self.p13, self.p14, self.p15, self.p16, self.p17, self.p18)
+            ]),
+            any([
+                pitch.enable_rbv.value in ['On', 1] for pitch in
+                (self.p19, self.p20, self.p21, self.p22, self.p23, self.p24,
+                 self.p25, self.p26, self.p27, self.p28, self.p29, self.p30,
+                 self.p31, self.p32, self.p33, self.p34, self.p35, self.p36)
+            ])
         )
 
     def can_enable(self):
-        return all(
-            [pitch.enable_rbv.value in ['Off', 0] for pitch in
-             (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6, self.p7,
-              self.p8, self.p9, self.p10, self.p11, self.p12, self.p13,
-              self.p14, self.p15, self.p16, self.p17, self.p18)]
+        return (
+            all([
+                pitch.enable_rbv.value in ['Off', 0] for pitch in
+                (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6,
+                 self.p7, self.p8, self.p9, self.p10, self.p11, self.p12,
+                 self.p13, self.p14, self.p15, self.p16, self.p17, self.p18)
+            ]),
+            all([
+                pitch.enable_rbv.value in ['Off', 0] for pitch in
+                (self.p19, self.p20, self.p21, self.p22, self.p23, self.p24,
+                 self.p25, self.p26, self.p27, self.p28, self.p29, self.p30,
+                 self.p31, self.p32, self.p33, self.p34, self.p35, self.p36)
+            ])
         )
 
 
