@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from textwrap import dedent
 from operator import xor
+from textwrap import dedent
 
 from caproto import ChannelType
 from caproto.server import PVGroup, SubGroup, ioc_arg_parser, pvproperty, run
@@ -143,8 +143,15 @@ class FakeRangeSelector(PVGroup):
 
 class FakePitchSelector(PVGroup):
     enable = pvproperty(value=0, name='P{index}:Select', dtype=bool)
-    enable_rbv = pvproperty(value=0, name='P{index}:Selected', dtype=bool, read_only=True)
+    enable_rbv = pvproperty(
+        value=0, name='P{index}:Selected', dtype=bool, read_only=True)
     selectable = pvproperty(value=0, name='P{index}:Selectable', dtype=bool)
+
+    @selectable.getter
+    async def selectable(self, instance):
+        if self.enable_rbv.value == 'On':
+            return 'On'
+        return self.parent.can_enable()
 
     @enable.putter
     async def enable(self, instance, value):
@@ -157,7 +164,8 @@ class FakePitchSelector(PVGroup):
 
 
 class FakeMotor(PVGroup):
-    motor = pvproperty(value=0.0, name='MCU{index}', record='motor', precision=3)
+    motor = pvproperty(
+        value=0.0, name='MCU{index}', record='motor', precision=3)
 
     def __init__(self, *args,
                  index,
@@ -184,8 +192,7 @@ class FakeMotor(PVGroup):
     async def motor(self, instance, async_lib):
         # Start the simulator:
         await motor_record_simulator(
-            self.motor, self, 
-            async_lib, self.defaults,
+            self.motor, self, async_lib, self.defaults,
             tick_rate_hz=self.tick_rate_hz
         )
 
@@ -194,7 +201,7 @@ class FakeMotor(PVGroup):
         return self.parent.can_move()
 
 
-class FakeMotorIOC(PVGroup):
+class FakeSeleneIOC(PVGroup):
     """
     A fake motor IOC, with 3 fake motors.
 
@@ -204,26 +211,53 @@ class FakeMotorIOC(PVGroup):
     mtr2 (motor)
     mtr3 (motor)
     """
-    range1 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index':1})
-    range2 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index':2})
+    range1 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index': 1})
+    range2 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index': 2})
 
-    motor_opts = dict(velocity=1., precision=3, user_limits=(0, 10))
+    p1 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 1})
+    p2 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 2})
+    p3 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 3})
+    p4 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 4})
+    p5 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 5})
+    p6 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 6})
+    p7 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 7})
+    p8 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 8})
+    p9 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 9})
+    p10 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 10})
+    p11 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 11})
+    p12 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 12})
+    p13 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 13})
+    p14 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 14})
+    p15 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 15})
+    p16 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 16})
+    p17 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 17})
+    p18 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 18})
 
-    p1 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':1})
-    p2 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':2})
-    p3 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':3})
-    p4 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index':4})
-
-    mcu1 = SubGroup(FakeMotor, **motor_opts, index=1, prefix='SEL2:', macros={'index':1})
-    # mcu2 = SubGroup(FakeMotor, **motor_opts, index=2, prefix='SEL2:', macros={'index':2})
+    mcu1 = SubGroup(
+        FakeMotor, velocity=1., precision=3, user_limits=(0, 10), index=1,
+        prefix='SEL2:', macros={'index': 1}
+    )
 
     def can_move(self):
-        return any([1 if pitch.enable_rbv.value in ['On', 1] else 0  for pitch in (self.p1,self.p2,self.p3,self.p4)])
+        return any(
+            [1 if pitch.enable_rbv.value in ['On', 1] else 0 for pitch in
+             (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6, self.p7,
+              self.p8, self.p9, self.p10, self.p11, self.p12, self.p13,
+              self.p14, self.p15, self.p16, self.p17, self.p18)]
+        )
+
+    def can_enable(self):
+        return all(
+            [pitch.enable_rbv.value in ['Off', 0] for pitch in
+             (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6, self.p7,
+              self.p8, self.p9, self.p10, self.p11, self.p12, self.p13,
+              self.p14, self.p15, self.p16, self.p17, self.p18)]
+        )
 
 
 if __name__ == '__main__':
     ioc_options, run_options = ioc_arg_parser(
         default_prefix='SQ:AMOR:',
-        desc=dedent(FakeMotorIOC.__doc__))
-    ioc = FakeMotorIOC(**ioc_options)
+        desc=dedent(FakeSeleneIOC.__doc__))
+    ioc = FakeSeleneIOC(**ioc_options)
     run(ioc.pvdb, **run_options)
