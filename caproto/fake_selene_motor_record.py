@@ -16,7 +16,10 @@ async def broadcast_precision_to_fields(record):
             await prop.write_metadata(precision=precision)
 
 
-async def motor_record_simulator(instance, parent, async_lib, defaults=None,
+async def motor_record_simulator(instance,
+                                 parent,
+                                 async_lib,
+                                 defaults=None,
                                  tick_rate_hz=10.):
     """
     A simple motor record simulator.
@@ -66,6 +69,7 @@ async def motor_record_simulator(instance, parent, async_lib, defaults=None,
     await fields.motor_step_size.write(defaults['resolution'])
     await fields.user_low_limit.write(defaults['user_limits'][0])
     await fields.user_high_limit.write(defaults['user_limits'][1])
+    await fields.limit_violation.write(0)
 
     while True:
         dwell = 1. / tick_rate_hz
@@ -142,10 +146,19 @@ class FakeRangeSelector(PVGroup):
 
 
 class FakePitchSelector(PVGroup):
-    enable = pvproperty(value=0, name='P{index}:Select', dtype=bool)
-    enable_rbv = pvproperty(
-        value=0, name='P{index}:Selected', dtype=bool, read_only=True)
-    selectable = pvproperty(value=0, name='P{index}:Selectable', dtype=bool)
+    enable = pvproperty(value=0,
+                        name='P{index}:Select',
+                        dtype=bool,
+                        enum_strings=['true', 'false'])
+    enable_rbv = pvproperty(value=0,
+                            name='P{index}:Selected',
+                            dtype=bool,
+                            read_only=True,
+                            enum_strings=['true', 'false'])
+    selectable = pvproperty(value=0,
+                            name='P{index}:Selectable',
+                            dtype=bool,
+                            enum_strings=['true', 'false'])
 
     def __init__(self, *args, mcu_index, **kwargs):
         super().__init__(*args, **kwargs)
@@ -153,25 +166,28 @@ class FakePitchSelector(PVGroup):
 
     @selectable.getter
     async def selectable(self, instance):
-        if self.enable_rbv.value == 'On':
-            return 'On'
-        return self.parent.can_enable()[self.mcu_index-1]
+        if self.enable_rbv.value == 'true':
+            return 'true'
+        return self.parent.can_enable()[self.mcu_index - 1]
 
     @enable.putter
     async def enable(self, instance, value):
-        if self.selectable.value == 'Off':
+        if self.selectable.value == 'false':
             return
-        if value == 'Off':
+        if value == 'false':
             return
-        current = True if self.enable_rbv.value == "On" else False
+        current = True if self.enable_rbv.value == "true" else False
         await self.enable_rbv.write(not current)
 
 
 class FakeMotor(PVGroup):
-    motor = pvproperty(
-        value=0.0, name='MCU{index}', record='motor', precision=3)
+    motor = pvproperty(value=0.0,
+                       name='MCU{index}',
+                       record='motor',
+                       precision=3)
 
-    def __init__(self, *args,
+    def __init__(self,
+                 *args,
                  index,
                  velocity=0.1,
                  precision=3,
@@ -195,14 +211,15 @@ class FakeMotor(PVGroup):
     @motor.startup
     async def motor(self, instance, async_lib):
         # Start the simulator:
-        await motor_record_simulator(
-            self.motor, self, async_lib, self.defaults,
-            tick_rate_hz=self.tick_rate_hz
-        )
+        await motor_record_simulator(self.motor,
+                                     self,
+                                     async_lib,
+                                     self.defaults,
+                                     tick_rate_hz=self.tick_rate_hz)
 
     @property
     def can_move(self):
-        return self.parent.can_move()[self.index-1]
+        return self.parent.can_move()[self.index - 1]
 
 
 class FakeSeleneIOC(PVGroup):
@@ -218,88 +235,204 @@ class FakeSeleneIOC(PVGroup):
     range1 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index': 1})
     range2 = SubGroup(FakeRangeSelector, prefix='SEL2:', macros={'index': 2})
 
-    p1 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 1},  mcu_index=1)
-    p2 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 2},  mcu_index=1)
-    p3 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 3},  mcu_index=1)
-    p4 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 4},  mcu_index=1)
-    p5 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 5},  mcu_index=1)
-    p6 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 6},  mcu_index=1)
-    p7 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 7},  mcu_index=1)
-    p8 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 8},  mcu_index=1)
-    p9 = SubGroup(FakePitchSelector, prefix='SEL2:',  macros={'index': 9},  mcu_index=1)
-    p10 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 10}, mcu_index=1)
-    p11 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 11}, mcu_index=1)
-    p12 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 12}, mcu_index=1)
-    p13 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 13}, mcu_index=1)
-    p14 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 14}, mcu_index=1)
-    p15 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 15}, mcu_index=1)
-    p16 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 16}, mcu_index=1)
-    p17 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 17}, mcu_index=1)
-    p18 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 18}, mcu_index=1)
-    p19 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 19}, mcu_index=2)
-    p20 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 20}, mcu_index=2)
-    p21 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 21}, mcu_index=2)
-    p22 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 22}, mcu_index=2)
-    p23 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 23}, mcu_index=2)
-    p24 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 24}, mcu_index=2)
-    p25 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 25}, mcu_index=2)
-    p26 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 26}, mcu_index=2)
-    p27 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 27}, mcu_index=2)
-    p28 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 28}, mcu_index=2)
-    p29 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 29}, mcu_index=2)
-    p30 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 30}, mcu_index=2)
-    p31 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 31}, mcu_index=2)
-    p32 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 32}, mcu_index=2)
-    p33 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 33}, mcu_index=2)
-    p34 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 34}, mcu_index=2)
-    p35 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 35}, mcu_index=2)
-    p36 = SubGroup(FakePitchSelector, prefix='SEL2:', macros={'index': 36}, mcu_index=2)
+    p1 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 1},
+                  mcu_index=1)
+    p2 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 2},
+                  mcu_index=1)
+    p3 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 3},
+                  mcu_index=1)
+    p4 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 4},
+                  mcu_index=1)
+    p5 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 5},
+                  mcu_index=1)
+    p6 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 6},
+                  mcu_index=1)
+    p7 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 7},
+                  mcu_index=1)
+    p8 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 8},
+                  mcu_index=1)
+    p9 = SubGroup(FakePitchSelector,
+                  prefix='SEL2:',
+                  macros={'index': 9},
+                  mcu_index=1)
+    p10 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 10},
+                   mcu_index=1)
+    p11 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 11},
+                   mcu_index=1)
+    p12 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 12},
+                   mcu_index=1)
+    p13 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 13},
+                   mcu_index=1)
+    p14 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 14},
+                   mcu_index=1)
+    p15 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 15},
+                   mcu_index=1)
+    p16 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 16},
+                   mcu_index=1)
+    p17 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 17},
+                   mcu_index=1)
+    p18 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 18},
+                   mcu_index=1)
+    p19 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 19},
+                   mcu_index=2)
+    p20 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 20},
+                   mcu_index=2)
+    p21 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 21},
+                   mcu_index=2)
+    p22 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 22},
+                   mcu_index=2)
+    p23 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 23},
+                   mcu_index=2)
+    p24 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 24},
+                   mcu_index=2)
+    p25 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 25},
+                   mcu_index=2)
+    p26 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 26},
+                   mcu_index=2)
+    p27 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 27},
+                   mcu_index=2)
+    p28 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 28},
+                   mcu_index=2)
+    p29 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 29},
+                   mcu_index=2)
+    p30 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 30},
+                   mcu_index=2)
+    p31 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 31},
+                   mcu_index=2)
+    p32 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 32},
+                   mcu_index=2)
+    p33 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 33},
+                   mcu_index=2)
+    p34 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 34},
+                   mcu_index=2)
+    p35 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 35},
+                   mcu_index=2)
+    p36 = SubGroup(FakePitchSelector,
+                   prefix='SEL2:',
+                   macros={'index': 36},
+                   mcu_index=2)
 
-    mcu1 = SubGroup(
-        FakeMotor, velocity=1., precision=3, user_limits=(0, 10), index=1,
-        prefix='SEL2:', macros={'index': 1}
-    )
-    mcu2 = SubGroup(
-        FakeMotor, velocity=1., precision=3, user_limits=(0, 10), index=2,
-        prefix='SEL2:', macros={'index': 2}
-    )
+    mcu1 = SubGroup(FakeMotor,
+                    velocity=1.,
+                    precision=3,
+                    user_limits=(0, 10),
+                    index=1,
+                    prefix='SEL2:',
+                    macros={'index': 1})
+    mcu2 = SubGroup(FakeMotor,
+                    velocity=1.,
+                    precision=3,
+                    user_limits=(0, 10),
+                    index=2,
+                    prefix='SEL2:',
+                    macros={'index': 2})
 
     def can_move(self):
-        return (
-            any([
-                pitch.enable_rbv.value in ['On', 1] for pitch in
-                (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6,
-                 self.p7, self.p8, self.p9, self.p10, self.p11, self.p12,
-                 self.p13, self.p14, self.p15, self.p16, self.p17, self.p18)
-            ]),
-            any([
-                pitch.enable_rbv.value in ['On', 1] for pitch in
-                (self.p19, self.p20, self.p21, self.p22, self.p23, self.p24,
-                 self.p25, self.p26, self.p27, self.p28, self.p29, self.p30,
-                 self.p31, self.p32, self.p33, self.p34, self.p35, self.p36)
-            ])
-        )
+        return (any([
+            pitch.enable_rbv.value in ['true', 1]
+            for pitch in (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6,
+                          self.p7, self.p8, self.p9, self.p10, self.p11,
+                          self.p12, self.p13, self.p14, self.p15, self.p16,
+                          self.p17, self.p18)
+        ]),
+                any([
+                    pitch.enable_rbv.value in ['true', 1]
+                    for pitch in (self.p19, self.p20, self.p21, self.p22,
+                                  self.p23, self.p24, self.p25, self.p26,
+                                  self.p27, self.p28, self.p29, self.p30,
+                                  self.p31, self.p32, self.p33, self.p34,
+                                  self.p35, self.p36)
+                ]))
 
     def can_enable(self):
-        return (
-            all([
-                pitch.enable_rbv.value in ['Off', 0] for pitch in
-                (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6,
-                 self.p7, self.p8, self.p9, self.p10, self.p11, self.p12,
-                 self.p13, self.p14, self.p15, self.p16, self.p17, self.p18)
-            ]),
-            all([
-                pitch.enable_rbv.value in ['Off', 0] for pitch in
-                (self.p19, self.p20, self.p21, self.p22, self.p23, self.p24,
-                 self.p25, self.p26, self.p27, self.p28, self.p29, self.p30,
-                 self.p31, self.p32, self.p33, self.p34, self.p35, self.p36)
-            ])
-        )
+        return (all([
+            pitch.enable_rbv.value in ['true', 0]
+            for pitch in (self.p1, self.p2, self.p3, self.p4, self.p5, self.p6,
+                          self.p7, self.p8, self.p9, self.p10, self.p11,
+                          self.p12, self.p13, self.p14, self.p15, self.p16,
+                          self.p17, self.p18)
+        ]),
+                all([
+                    pitch.enable_rbv.value in ['true', 0]
+                    for pitch in (self.p19, self.p20, self.p21, self.p22,
+                                  self.p23, self.p24, self.p25, self.p26,
+                                  self.p27, self.p28, self.p29, self.p30,
+                                  self.p31, self.p32, self.p33, self.p34,
+                                  self.p35, self.p36)
+                ]))
 
 
 if __name__ == '__main__':
-    ioc_options, run_options = ioc_arg_parser(
-        default_prefix='SQ:AMOR:',
-        desc=dedent(FakeSeleneIOC.__doc__))
+    ioc_options, run_options = ioc_arg_parser(default_prefix='SQ:AMOR:',
+                                              desc=dedent(
+                                                  FakeSeleneIOC.__doc__))
     ioc = FakeSeleneIOC(**ioc_options)
     run(ioc.pvdb, **run_options)
